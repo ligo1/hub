@@ -55,7 +55,7 @@ export const songsService = {
     return res.data.data.song;
   },
 
-  updateSongMeta: async (id: string, data: { title?: string; artist?: string; genre?: string; key?: string; bpm?: number }): Promise<Song> => {
+  updateSongMeta: async (id: string, data: { title?: string; artist?: string; genre?: string; key?: string; bpm?: number; duration?: number }): Promise<Song> => {
     const res = await api.put<{ success: boolean; data: { song: Song } }>(`/songs/${id}`, data);
     return res.data.data.song;
   },
