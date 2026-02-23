@@ -12,7 +12,7 @@ async function mxmFetch<T>(path: string): Promise<T | null> {
   try {
     const res = await fetch(`${BASE}${path}&apikey=${API_KEY}`, { signal: AbortSignal.timeout(6000) });
     if (!res.ok) return null;
-    const json: MxmResponse<T> = await res.json();
+    const json = await res.json() as MxmResponse<T>;
     if (json.message.header.status_code !== 200) return null;
     return json.message.body;
   } catch {

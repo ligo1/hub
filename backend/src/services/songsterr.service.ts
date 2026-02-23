@@ -44,7 +44,7 @@ export async function searchSongsterr(artist: string, title: string): Promise<nu
     const url = `${BASE}/songs.json?pattern=${encodeURIComponent(`${artist} ${title}`)}`;
     const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
     if (!res.ok) return null;
-    const results: SongsterrSearchItem[] = await res.json();
+    const results = await res.json() as SongsterrSearchItem[];
     if (!Array.isArray(results) || results.length === 0) return null;
     return results[0].id;
   } catch {
@@ -57,7 +57,7 @@ export async function getSongsterrData(songId: number): Promise<SongsterrData | 
     const url = `${BASE}/song/${songId}/revision/default.json`;
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) return null;
-    const data: RevisionData = await res.json();
+    const data = await res.json() as RevisionData;
 
     const bpm = data.tempo ?? 0;
 

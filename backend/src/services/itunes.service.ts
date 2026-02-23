@@ -18,7 +18,7 @@ export async function searchItunes(query: string, limit = 15): Promise<ItunesTra
   const url = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&entity=song&limit=${limit}`;
   const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
   if (!res.ok) return [];
-  const data: ItunesSearchResponse = await res.json();
+  const data = await res.json() as ItunesSearchResponse;
   return data.results
     .filter((r) => r.wrapperType === 'track' && r.kind === 'song' && r.trackId !== undefined)
     .map((r) => ({
