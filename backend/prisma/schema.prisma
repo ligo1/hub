@@ -1,0 +1,261 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String           @id @default(cuid())
+  email         String           @unique
+  googleId      String?          @unique
+  passwordHash  String?
+  name          String
+  avatarUrl     String?
+  bio           String?
+  instruments   UserInstrument[]
+  songWishlist  UserSong[]
+  availability  Availability[]
+  sessionMembers SessionMember[]
+  matchesA      Match[]          @relation("MatchUserA")
+  matchesB      Match[]          @relation("MatchUserB")
+  projects      Project[]
+  playlists     Playlist[]
+  createdAt     DateTime         @default(now())
+}
+
+model Instrument {
+  id    String           @id @default(cuid())
+  name  String           @unique
+  icon  String
+  users UserInstrument[]
+}
+
+model UserInstrument {
+  id           String     @id @default(cuid())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+  instrumentId String
+  level        SkillLevel
+}
+
+model Song {
+  id            String         @id @default(cuid())
+  title         String
+  artist        String
+  genre         String         @default("")
+  key           String         @default("")
+  bpm           Int            @default(0)
+  artworkUrl    String?
+  previewUrl    String?
+  itunesTrackId Int?           @unique
+  songsterrId   Int?           @unique
+  duration      Int?
+  sections      SongSection[]
+  users         UserSong[]
+  sessions      SessionSong[]
+  playlists     PlaylistSong[]
+}
+
+model SongSection {
+  id     String      @id @default(cuid())
+  song   Song        @relation(fields: [songId], references: [id], onDelete: Cascade)
+  songId String
+  name   String
+  order  Int
+  lines  LyricLine[]
+}
+
+model LyricLine {
+  id        String      @id @default(cuid())
+  section   SongSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  sectionId String
+  order     Int
+  lyricText String
+  startTime Float?      // seconds from start of track (from LRC timestamps)
+  chords    ChordBeat[]
+}
+
+model ChordBeat {
+  id           String    @id @default(cuid())
+  line         LyricLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  lineId       String
+  chord        String
+  beatPosition Float
+}
+
+model UserSong {
+  userId String
+  songId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  song   Song   @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@id([userId, songId])
+}
+
+model Availability {
+  id            String    @id @default(cuid())
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String
+  dayOfWeek     Int
+  timeSlotStart String
+  timeSlotEnd   String
+  frequency     Frequency
+}
+
+model Room {
+  id       String    @id @default(cuid())
+  name     String
+  capacity Int
+  sessions Session[]
+}
+
+model Session {
+  id        String          @id @default(cuid())
+  room      Room            @relation(fields: [roomId], references: [id])
+  roomId    String
+  title     String
+  startTime DateTime
+  endTime   DateTime
+  status    SessionStatus
+  members   SessionMember[]
+  songs     SessionSong[]
+}
+
+model SessionMember {
+  sessionId    String
+  userId       String
+  session      Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instrumentId String
+
+  @@id([sessionId, userId])
+}
+
+model SessionSong {
+  sessionId String
+  songId    String
+  order     Int
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  song      Song    @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, songId])
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  userA     User     @relation("MatchUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userAId   String
+  userB     User     @relation("MatchUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  userBId   String
+  score     Float
+  reasons   String[]
+  createdAt DateTime @default(now())
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  PRO
+}
+
+enum Frequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+enum SessionStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model Playlist {
+  id        String         @id @default(cuid())
+  name      String
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  songs     PlaylistSong[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model PlaylistSong {
+  playlistId String
+  songId     String
+  order      Int
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  song       Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@id([playlistId, songId])
+}
+
+// ─── Hub Models ───────────────────────────────────────────────────────────────
+
+model Project {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  color       String        @default("#8B5CF6")
+  icon        String        @default("Folder")
+  startDate   DateTime?
+  dueDate     DateTime?
+  ownerId     String
+  owner       User          @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  notes       Note[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
+  dueDate     DateTime?
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
